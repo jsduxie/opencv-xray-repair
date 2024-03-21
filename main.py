@@ -71,7 +71,7 @@ class image_processing:
         
     def image_smoothing(self, image):
         #transformed = cv2.medianBlur(image, 3)
-        transformed = cv2.bilateralFilter(image, 11, 150, 25)
+        transformed = cv2.bilateralFilter(image, 9, 175, 50)
         
         return transformed
 
@@ -98,15 +98,37 @@ class image_processing:
                     c = c + 2
                 elif (key == ord('a')):
                     alpha = alpha + 2'''
+    def contrast_enhance(self, image, gamma):
+        image_float = np.float32(image) / 255.0
+
+        corrected_image_float = np.power(image_float, gamma)
+
+        corrected_image_uint8 = np.uint8(corrected_image_float * 255)
+        return corrected_image_uint8
+    def brightness_adjust(self, image, amount):
+        image_float = np.float32(image)
+        brightened_image_float = image_float + amount
+        brightened_image_float = np.clip(brightened_image_float, 0, 255)
+        brightened_image_uint8 = np.uint8(brightened_image_float)
+        return brightened_image_uint8
     def unwarped(self, image):
-        pts_before = np.float32([[250, 227], [30, 233], [10,16], [233,6]])
+        pts_before = np.float32([[250, 227], [35, 233], [10,16], [233,6]])
         pts_after = np.float32([[255, 255], [0, 255], [0,0], [255,0]])
         M = cv2.getPerspectiveTransform(pts_before,pts_after)
         dst = cv2.warpPerspective(image, M,(255,255))
         return dst
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
+
+        #image = self.contrast_enhance(image, 1.9)
+        #image = cv2.medianBlur(image, 3)
         image = self.image_smoothing(image)
+        image = self.contrast_enhance(image, 1.9)
+        #image = cv2.medianBlur(image, 3)
+        
+        
+        #image = self.brightness_adjust(image, 50)
+
         image = self.unwarped(image)
         
         return image
