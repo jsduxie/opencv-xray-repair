@@ -7,6 +7,7 @@ import cv2
 import math
 import numpy as np
 import re
+from matplotlib import pyplot as plt
 
 
 window_name_original = 'Input :('
@@ -28,6 +29,7 @@ class file_handling:
                 self.unfiltered_images = os.listdir(self.directory)
 
                 self.images = [file for file in self.unfiltered_images if re.match(r'.*\.(jpg|jpeg|png|gif)$', file)]
+                self.images.sort()
                 print(len(self.images), len(self.unfiltered_images))
 
 
@@ -71,7 +73,7 @@ class image_processing:
         
     def image_smoothing(self, image):
         #transformed = cv2.medianBlur(image, 3)
-        transformed = cv2.bilateralFilter(image, 9, 175, 50)
+        transformed = cv2.bilateralFilter(image, d=9, sigmaColor=150, sigmaSpace=50)
         
         return transformed
 
@@ -117,28 +119,54 @@ class image_processing:
         M = cv2.getPerspectiveTransform(pts_before,pts_after)
         dst = cv2.warpPerspective(image, M,(255,255))
         return dst
+    def denoise(self, image):
+        dst = cv2.fastNlMeansDenoisingColored(image, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
+        return dst
+    def histogram(self):
+        img = cv2.imread('./Results/im001-healthy.jpg')
+        assert img is not None, "file could not be read, check with os.path.exists()"
+        color = ('b','g','r')
+        for i,col in enumerate(color):
+            histr = cv2.calcHist([img],[i],None,[256],[0,256])
+            plt.plot(histr,color = col)
+            plt.xlim([0,256])
+        plt.show()
+    def equalise(self, image):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+        
+        hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
+        
+        image = cv2.cvtColor(hsv, cv2.COLOR_YCrCb2BGR)
+        return image
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
         #image = self.contrast_enhance(image, 1.9)
-        #image = cv2.medianBlur(image, 3)
-        image = self.image_smoothing(image)
-        image = self.contrast_enhance(image, 1.9)
+        image = cv2.medianBlur(image, 3)
+        #image = self.image_smoothing(image)
+        #
         #image = cv2.medianBlur(image, 3)
         
-        
-        #image = self.brightness_adjust(image, 50)
-
         image = self.unwarped(image)
+        #image = self.brightness_adjust(image, 50)
+        #image = cv2.GaussianBlur(image,(3,3),1,1)
+        image = self.denoise(image)
+        image = self.equalise(image)
+        image = self.denoise(image)
+        #image = self.image_smoothing(image)
+        
         
         return image
 
     def process_all_images(self):
         i = 1
+        #self.histogram()
+        
         for image in file.images:
             print(f"Processing image {i} of {len(file.images)} - {image}")
             i += 1
             print(image)
+            self.image = image
             processed_image = self.process_image(image)
             file.save_image(processed_image, image)
 
