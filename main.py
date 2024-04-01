@@ -142,11 +142,9 @@ class image_processing:
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
         #image = self.contrast_enhance(image, 1.9)
-        image = cv2.medianBlur(image, 3)
-        #image = self.image_smoothing(image)
-        #
         #image = cv2.medianBlur(image, 3)
-        
+        image = self.image_smoothing(image)
+
         image = self.unwarped(image)
         #image = self.brightness_adjust(image, 50)
         #image = cv2.GaussianBlur(image,(3,3),1,1)
