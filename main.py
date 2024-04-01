@@ -9,7 +9,6 @@ import numpy as np
 import re
 from matplotlib import pyplot as plt
 
-
 window_name_original = 'Input :('
 window_name_transformed = "Output :)"
 
@@ -133,11 +132,22 @@ class image_processing:
         plt.show()
     def equalise(self, image):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
-        
         hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
-        
         image = cv2.cvtColor(hsv, cv2.COLOR_YCrCb2BGR)
         return image
+    def contrast_lab(self, image):
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+        l,a,b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        cl = clahe.apply(l)
+        new = cv2.merge((cl,a,b))
+        result = cv2.cvtColor(new, cv2.COLOR_LAB2BGR)
+        return result
+    def sharpen(self, image):
+        kernel = np.array([[0, -1, 0],[-1, 5, -1],[0, -1, 0]])
+        result = cv2.filter2D(image, -1, kernel)
+        return result
+
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
@@ -148,9 +158,14 @@ class image_processing:
         image = self.unwarped(image)
         #image = self.brightness_adjust(image, 50)
         #image = cv2.GaussianBlur(image,(3,3),1,1)
+        
         image = self.denoise(image)
         image = self.equalise(image)
         image = self.denoise(image)
+        #image = self.sharpen(image)
+        image = self.contrast_lab(image)
+        
+        #image = self.contrast_enhance(image, 1.2)
         #image = self.image_smoothing(image)
         
         
