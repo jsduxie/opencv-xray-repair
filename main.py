@@ -147,6 +147,12 @@ class image_processing:
         kernel = np.array([[0, -1, 0],[-1, 5, -1],[0, -1, 0]])
         result = cv2.filter2D(image, -1, kernel)
         return result
+    def laplace(self, image):
+        dst = cv2.Laplacian(image, cv2.CV_8U, ksize=3)
+        image_new = cv2.subtract(image, dst)
+        return image_new
+
+
 
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
@@ -160,6 +166,7 @@ class image_processing:
         #image = cv2.GaussianBlur(image,(3,3),1,1)
         
         image = self.denoise(image)
+        image = self.laplace(image)
         image = self.equalise(image)
         image = self.denoise(image)
         #image = self.sharpen(image)
@@ -196,4 +203,5 @@ if (file.status == -1):
 
 
 processing = image_processing()
+#processing.process_image("im001-healthy.jpg")
 processing.process_all_images()
