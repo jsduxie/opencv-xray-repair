@@ -133,6 +133,8 @@ class image_processing:
     def equalise(self, image):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
         hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
+        #hsv[:,:,1] = cv2.equalizeHist(hsv[:,:,1])
+        #hsv[:,:,0] = cv2.equalizeHist(hsv[:,:,0])
         image = cv2.cvtColor(hsv, cv2.COLOR_YCrCb2BGR)
         return image
     def contrast_lab(self, image):
@@ -151,26 +153,58 @@ class image_processing:
         dst = cv2.Laplacian(image, cv2.CV_8U, ksize=3)
         image_new = cv2.subtract(image, dst)
         return image_new
+    def detect_contours(self, image):
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+        height, width = image_gray.shape
+        top_right = image_gray[0:height//2, width//2:width]
+        
+        edges = cv2.Canny(top_right, 400, 500)
+        
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        contour = max(contours, key=cv2.contourArea)
+        (x, y), radius = cv2.minEnclosingCircle(contour)
+        center = (int(x), int(y))
+        radius = int(radius) + 3
 
+        mask_full_size = np.zeros_like(image)
+    
+        cv2.circle(mask_full_size[0:height//2, width//2:width], center, radius, (255, 255, 255), -1)
+        
+        image_color = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
+        
+        overlay = cv2.addWeighted(image_color, 0.5, mask_full_size, 0.5, 0)
+
+        #cv2.imshow("Overlay", overlay)
+        
+        #cv2.waitKey()
+        return mask_full_size
+    def inpaint(self, image, mask):
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        output = cv2.inpaint(image, mask, 5, cv2.INPAINT_TELEA)
+        return output
 
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
-
-        #image = self.contrast_enhance(image, 1.9)
-        #image = cv2.medianBlur(image, 3)
-        image = self.image_smoothing(image)
-
-        image = self.unwarped(image)
-        #image = self.brightness_adjust(image, 50)
-        #image = cv2.GaussianBlur(image,(3,3),1,1)
         
-        image = self.denoise(image)
+
+        #image = self.image_smoothing(image)
+        image = self.unwarped(image)
+        
+        mask = self.detect_contours(image)
+        image = self.inpaint(image, mask)
+        
+        image = cv2.bilateralFilter(image, 9, 150, 75)
+        #image = self.denoise(image)
         image = self.laplace(image)
-        image = self.equalise(image)
-        image = self.denoise(image)
-        #image = self.sharpen(image)
-        image = self.contrast_lab(image)
+        
+        
+        #image = self.equalise(image)
+        #image = self.denoise(image)
+        #image = self.contrast_lab(image)
+        
+        
         
         #image = self.contrast_enhance(image, 1.2)
         #image = self.image_smoothing(image)
@@ -205,3 +239,40 @@ if (file.status == -1):
 processing = image_processing()
 #processing.process_image("im001-healthy.jpg")
 processing.process_all_images()
+
+
+
+'''
+def process_image(self, filename):
+        image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
+        dst = cv2.dft(image.astype(np.float32), dst=None, flags=None, nonzeroRows=None)
+        cv2.imshow("Fourier", dst)
+        cv2.waitKey()
+        #
+        #image = self.contrast_enhance(image, 1.9)
+        #image = cv2.medianBlur(image, 3)
+        image = self.image_smoothing(image)
+        image = self.unwarped(image)
+        
+        mask = self.detect_contours(image)
+        image = self.inpaint(image, mask)
+        
+        #image = self.brightness_adjust(image, 50)
+        #image = cv2.GaussianBlur(image,(3,3),1,1)
+        #image = cv2.bilateralFilter(image, 9, 150, 75)
+        image = self.denoise(image)
+        image = self.laplace(image)
+        
+        
+        image = self.equalise(image)
+        image = self.denoise(image)
+        #image = self.sharpen(image)
+        image = self.contrast_lab(image)
+        
+        
+        
+        #image = self.contrast_enhance(image, 1.2)
+        #image = self.image_smoothing(image)
+        
+        
+        return image'''
