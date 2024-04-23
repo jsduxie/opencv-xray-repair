@@ -8,6 +8,8 @@ import math
 import numpy as np
 import re
 from matplotlib import pyplot as plt
+from pyinpaint import Inpaint
+
 
 window_name_original = 'Input :('
 window_name_transformed = "Output :)"
@@ -119,7 +121,7 @@ class image_processing:
         dst = cv2.warpPerspective(image, M,(255,255))
         return dst
     def denoise(self, image):
-        dst = cv2.fastNlMeansDenoisingColored(image, h=9, hColor=9, templateWindowSize=7, searchWindowSize=21)
+        dst = cv2.fastNlMeansDenoisingColored(image, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
         return dst
     def histogram(self):
         img = cv2.imread('./Results/im001-healthy.jpg')
@@ -134,13 +136,6 @@ class image_processing:
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
         hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
         image = cv2.cvtColor(hsv, cv2.COLOR_YCrCb2BGR)
-
-        '''b,g,r = cv2.split(image)
-        b = cv2.equalizeHist(b) - 10
-        #g = cv2.equalizeHist(g)
-        r = cv2.equalizeHist(r)
-        image = cv2.merge((b,g,r))'''
-
         return image
     def contrast_lab(self, image):
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -154,11 +149,43 @@ class image_processing:
         kernel = np.array([[0, -1, 0],[-1, 5, -1],[0, -1, 0]])
         result = cv2.filter2D(image, -1, kernel)
         return result
-    def laplace(self, image):
-        dst = cv2.Laplacian(image, cv2.CV_8U, ksize=3)
+    def laplace(self, image, ksize=3):
+        dst = cv2.Laplacian(image, cv2.CV_8U, ksize=ksize)
         image_new = cv2.subtract(image, dst)
         return image_new
-    def adaptive_median_filter(self, image, max_kernel_size=9, threshold=[9,9,9]):
+    
+    def detect_contours(self, image):
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        height, width = image_gray.shape
+        top_right = image_gray[0:height//2, width//2:width]
+        
+        edges = cv2.Canny(top_right, 400, 500)
+        
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        contour = max(contours, key=cv2.contourArea)
+        (x, y), radius = cv2.minEnclosingCircle(contour)
+        center = (int(x), int(y))
+        radius = int(radius) + 3
+
+        mask_full_size = np.zeros_like(image)
+    
+        cv2.circle(mask_full_size[0:height//2, width//2:width], center, radius, (255, 255, 255), -1)
+        
+        image_color = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
+        
+        overlay = cv2.addWeighted(image_color, 0.5, mask_full_size, 0.5, 0)
+
+        #cv2.imshow("Overlay", overlay)
+        
+        #cv2.waitKey()
+        return mask_full_size
+    def inpaint(self, image, mask):
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        output = cv2.inpaint(image, mask, 5, cv2.INPAINT_TELEA)
+        return output
+    def adaptive_median_filter(self, image, max_kernel_size=9, threshold=[10,10,10]):
         # Define a function to calculate the median value within a given window
         def median_window(window):
             return np.median(window)
@@ -192,165 +219,53 @@ class image_processing:
                             kernel_size += 2  # Increase kernel size by 2 (to keep it odd)
 
         return filtered_image
-    def detect_contours(self, image):
-        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        height, width = image_gray.shape
-        top_right = image_gray[0:height//2, width//2:width]
-        
-        edges = cv2.Canny(top_right, 400, 500)
-        
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        contour = max(contours, key=cv2.contourArea)
-        (x, y), radius = cv2.minEnclosingCircle(contour)
-        center = (int(x), int(y))
-        radius = int(radius) + 3
-
-        mask_full_size = np.zeros_like(image)
-    
-        cv2.circle(mask_full_size[0:height//2, width//2:width], center, radius, (255, 255, 255), -1)
-        
-        image_color = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
-        
-        overlay = cv2.addWeighted(image_color, 0.5, mask_full_size, 0.5, 0)
-
-        #cv2.imshow("Overlay", overlay)
-        
-        #cv2.waitKey()
-        return mask_full_size
-    def inpaint(self, image, mask):
-        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        output = cv2.inpaint(image, mask, 5, cv2.INPAINT_TELEA)
-        return output
 
 
     def process_image(self, filename):
-        '''self.histogram()'''
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
-        #image = self.contrast_enhance(image, 1.9)
-        #image = cv2.medianBlur(image, 3)
-
+       
+        image = self.adaptive_median_filter(image, threshold=[10,10,20])
         #image = self.image_smoothing(image)
-        
-        image = self.adaptive_median_filter(image)
-
         image = self.unwarped(image)
-        #image = self._clean_reference_images(image)
         mask = self.detect_contours(image)
         image = self.inpaint(image, mask)
         
-        #image = self.brightness_adjust(image, 50)
-        #image = cv2.GaussianBlur(image,(3,3),1,1)
         
         image = self.denoise(image)
-        image = self.sharpen(image)
-        image = cv2.bilateralFilter(image, d=21, sigmaColor=21, sigmaSpace=21)
-        image = cv2.medianBlur(image, 7)
-        #image = self.adaptive_median_filter(image, max_kernel_size=7, threshold=[15,15,15])
         image = self.laplace(image)
         image = self.equalise(image)
-        '''image = cv2.medianBlur(image, 5)'''
-        
-        
         image = self.denoise(image)
-        #image = self.sharpen(image)
-        '''image = self.contrast_lab(image)'''
         
-        #image = self.contrast_enhance(image, 1.2)
-        #image = self.image_smoothing(image)
+        image = self.contrast_lab(image)
+
+        sobel_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)  # Sobel operator for horizontal gradient
+        sobel_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)  # Sobel operator for vertical gradient
+
+        # Convert back to uint8 and scale to [0, 255]
+        sobel_x = cv2.convertScaleAbs(sobel_x)
+        sobel_y = cv2.convertScaleAbs(sobel_y)
+
+        # Combine the horizontal and vertical gradients to get the final Sobel edge detection result
+        sobel = cv2.addWeighted(sobel_x, 0.5, sobel_y, 0.5, 0)
+        image = cv2.addWeighted(image, 1, sobel, 0.1, 0)
+        
+        b,g,r = cv2.split(image)
+
+        g = np.clip(g * 1.1, 0, 255).astype(np.uint8)
+        r = np.clip(r * 0.9, 0, 255).astype(np.uint8)
+
+        image = cv2.merge((b,g,r))
+        
         
         
         return image
-    def _calculate_average_cdf(self, reference_images: list):
-        cumulative_sums_L = np.zeros((256,), dtype=np.float32)
-        cumulative_sums_A = np.zeros((256,), dtype=np.float32)
-        cumulative_sums_B = np.zeros((256,), dtype=np.float32)
-
-        for reference in reference_images:
-            reference_img = cv2.imread(reference, cv2.IMREAD_COLOR)
-            reference_lab = cv2.cvtColor(reference_img, cv2.COLOR_BGR2LAB)
-            hist_L = cv2.calcHist([reference_lab], [0], None, [256], [0, 256])
-            hist_A = cv2.calcHist([reference_lab], [1], None, [256], [0, 256])
-            hist_B = cv2.calcHist([reference_lab], [2], None, [256], [0, 256])
-
-            cumulative_sums_L += np.cumsum(hist_L)
-            cumulative_sums_A += np.cumsum(hist_A)
-            cumulative_sums_B += np.cumsum(hist_B)
-
-            num_images = len(reference_images)
-            average_cdf_L = cumulative_sums_L / num_images
-            average_cdf_A = cumulative_sums_A / num_images
-            average_cdf_B = cumulative_sums_B / num_images
-            average_cdf_L /= average_cdf_L[-1]
-            average_cdf_A /= average_cdf_A[-1]
-            average_cdf_B /= average_cdf_B[-1]
-
-            self.average_cdf_L = average_cdf_L
-            self.average_cdf_A = average_cdf_A
-            self.average_cdf_B = average_cdf_B
-
-    def _clean_reference_images(self, image):
-        #references = ["./References/ref001.png", "./References/ref002.png", "./References/ref003.png", "./References/ref004.png", "./References/ref005.png", "./References/ref006.png", "./References/ref007.png"]
-        average_cdf_L = self.average_cdf_L
-        average_cdf_A = self.average_cdf_A
-        average_cdf_B = self.average_cdf_B
-        
-        
-        #, average_cdf_A, average_cdf_B = self._calculate_average_cdf(references)
-
-        target_lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-
-        matched_lab = np.zeros_like(target_lab)
-
-        target_hist_L = cv2.calcHist([target_lab], [0], None, [256], [0, 256])
-        target_hist_A = cv2.calcHist([target_lab], [1], None, [256], [0, 256])
-        target_hist_B = cv2.calcHist([target_lab], [2], None, [256], [0, 256])
-
-        # Compute cumulative distribution functions (CDF) of the target image for each LAB channel
-        target_cdf_L = np.cumsum(target_hist_L)
-        target_cdf_A = np.cumsum(target_hist_A)
-        target_cdf_B = np.cumsum(target_hist_B)
-
-        # Normalize the CDFs to [0, 1] range
-        target_cdf_L /= target_cdf_L[-1]
-        target_cdf_A /= target_cdf_A[-1]
-        target_cdf_B /= target_cdf_B[-1]
-
-        # Initialize arrays to store the mapping functions for each LAB channel
-        mapping_func_L = np.zeros(256, dtype=np.uint8)
-        mapping_func_A = np.zeros(256, dtype=np.uint8)
-        mapping_func_B = np.zeros(256, dtype=np.uint8)
-
-        # Calculate the mapping functions for each gray level and channel
-        for g1 in range(256):
-            # Find the gray level in the target image that matches the CDF value of the reference image for each channel
-            mapping_func_L[g1] = np.argmin(np.abs(target_cdf_L - average_cdf_L[g1]))
-            mapping_func_A[g1] = np.argmin(np.abs(target_cdf_A - average_cdf_A[g1]))
-            mapping_func_B[g1] = np.argmin(np.abs(target_cdf_B - average_cdf_B[g1]))
-
-        # Apply the mapping functions to each channel of the target image
-        matched_lab[:,:,0] = mapping_func_L[target_lab[:,:,0]]
-        matched_lab[:,:,1] = mapping_func_A[target_lab[:,:,1]]
-        matched_lab[:,:,2] = mapping_func_B[target_lab[:,:,2]]
-
-        # Convert the matched LAB image back to BGR color space
-        matched_img = cv2.cvtColor(matched_lab, cv2.COLOR_LAB2BGR)
-
-        '''cv2.imshow("Damaged", image)
-        cv2.imshow("Corrected", matched_img)
-        cv2.waitKey()'''
-        return matched_img
-
-
-
 
     def process_all_images(self):
         i = 1
         #self.histogram()
-        references = ["./References/ref006.png"]
-        self._calculate_average_cdf(references)
+        
         for image in file.images:
             print(f"Processing image {i} of {len(file.images)} - {image}")
             i += 1
@@ -372,5 +287,5 @@ if (file.status == -1):
 
 
 processing = image_processing()
-#processing.process_image("im002-healthy.jpg")
+#processing.process_image("im001-healthy.jpg")
 processing.process_all_images()
