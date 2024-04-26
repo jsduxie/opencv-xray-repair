@@ -14,11 +14,12 @@ from pyinpaint import Inpaint
 window_name_original = 'Input :('
 window_name_transformed = "Output :)"
 
+
 class file_handling:
     def __init__(self):
         self.status = 1
         if (len(sys.argv) != 2):
-            print('Incorrect Argument Structure - should be in the format python main.py [directory]')
+            print('Arguments should be in format python main.py [directory]')
             self.status = -1
         else:
             if (not os.path.isdir(sys.argv[1])):
@@ -29,49 +30,22 @@ class file_handling:
                 print(os.listdir(self.directory))
                 self.unfiltered_images = os.listdir(self.directory)
 
-                self.images = [file for file in self.unfiltered_images if re.match(r'.*\.(jpg|jpeg|png|gif)$', file)]
+                self.images = [
+                    file for file in self.unfiltered_images
+                    if re.match(r'.*\.(jpg|jpeg|png|gif)$', file)
+                    ]
                 self.images.sort()
                 print(len(self.images), len(self.unfiltered_images))
-
-
         self.output_dir = "./Results"
+
     def save_image(self, image, filename):
         cv2.imwrite(f'{self.output_dir}/{filename}', image)
-
 
 
 class image_processing:
     def __init__(self):
         image = cv2.imread(f'./{file.directory}/im001-healthy.jpg', cv2.IMREAD_COLOR)
-        '''def click_event(event, x, y, flags, params):
-            if event == cv2.EVENT_LBUTTONDOWN:
-                print(f'({x}, {y})')
-                cv2.putText(image, f'({x},{y})',(x,y),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                cv2.circle(image, (x,y), 1, (255, 255, 255), 1)  
 
-        
-        
-        pts_before = np.float32([[251, 229], [31, 238], [9,18], [234,8]])
-        pts_after = np.float32([[255, 255], [0, 255], [0,0], [255,0]])
-        M = cv2.getPerspectiveTransform(pts_before,pts_after)
-        dst = cv2.warpPerspective(image, M,(255,255))
-        cv2.imshow("Before", image)
-        cv2.imshow("Warped", dst)
-        
-
-        cv2.namedWindow('Point Coordinates')
-
-        cv2.setMouseCallback('Point Coordinates', click_event)
-
-        while True:
-            cv2.imshow('Point Coordinates',image)
-            k = cv2.waitKey(1) & 0xFF
-            if k == ord("x"):
-                break
-        cv2.destroyAllWindows()'''
-            
-        
     def image_smoothing(self, image):
         #transformed = cv2.medianBlur(image, 3)
         transformed = cv2.bilateralFilter(image, d=9, sigmaColor=150, sigmaSpace=50)
@@ -185,7 +159,7 @@ class image_processing:
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         output = cv2.inpaint(image, mask, 5, cv2.INPAINT_TELEA)
         return output
-    def adaptive_median_filter(self, image, max_kernel_size=9, threshold=[10,10,10]):
+    def adaptive_median_filter(self, image, max_kernel_size=13, threshold=[10,10,10]):
         # Define a function to calculate the median value within a given window
         def median_window(window):
             return np.median(window)
@@ -225,25 +199,26 @@ class image_processing:
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
-       
-        image = self.adaptive_median_filter(image, threshold=[10,10,20])
-        #image = self.image_smoothing(image)
+
+        image = self.adaptive_median_filter(image)
+        
+        
         image = self.unwarped(image)
         mask = self.detect_contours(image)
         image = self.inpaint(image, mask)
         
         
-        image = self.denoise(image)
+        image = cv2.fastNlMeansDenoisingColored(image, h=12, hColor=12, templateWindowSize=7, searchWindowSize=21)
         image = self.laplace(image)
         image = self.equalise(image)
         image = self.denoise(image)
         
         image = self.contrast_lab(image)
 
-        sobel_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)  # Sobel operator for horizontal gradient
-        sobel_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)  # Sobel operator for vertical gradient
+        sobel_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)  #h
+        sobel_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)  #v
 
-        # Convert back to uint8 and scale to [0, 255]
+        
         sobel_x = cv2.convertScaleAbs(sobel_x)
         sobel_y = cv2.convertScaleAbs(sobel_y)
 
@@ -253,10 +228,13 @@ class image_processing:
         
         b,g,r = cv2.split(image)
 
+        #b = np.clip(b * 0.9, 0, 255).astype(np.uint8)
         g = np.clip(g * 1.1, 0, 255).astype(np.uint8)
         r = np.clip(r * 0.9, 0, 255).astype(np.uint8)
 
         image = cv2.merge((b,g,r))
+
+        
         
         
         
