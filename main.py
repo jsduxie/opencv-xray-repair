@@ -8,12 +8,12 @@ import math
 import numpy as np
 import re
 from matplotlib import pyplot as plt
-from pyinpaint import Inpaint
+from Inpainter import Inpainter
 
 
 window_name_original = 'Input :('
 window_name_transformed = "Output :)"
-
+import multiprocessing
 
 class file_handling:
     def __init__(self):
@@ -27,7 +27,6 @@ class file_handling:
                 self.status = -1
             else:
                 self.directory = sys.argv[1]
-                print(os.listdir(self.directory))
                 self.unfiltered_images = os.listdir(self.directory)
 
                 self.images = [
@@ -131,10 +130,13 @@ class image_processing:
     def detect_contours(self, image):
         image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+
         height, width = image_gray.shape
         top_right = image_gray[0:height//2, width//2:width]
+
         
-        edges = cv2.Canny(top_right, 400, 500)
+
+        edges = cv2.Canny(top_right, 400, 500) #400,500
         
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
@@ -150,10 +152,10 @@ class image_processing:
         image_color = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
         
         overlay = cv2.addWeighted(image_color, 0.5, mask_full_size, 0.5, 0)
+    
 
         #cv2.imshow("Overlay", overlay)
         
-        #cv2.waitKey()
         return mask_full_size
     def inpaint(self, image, mask):
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
@@ -200,12 +202,19 @@ class image_processing:
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
 
-        image = self.adaptive_median_filter(image)
-        
-        
+        image = self.adaptive_median_filter(image, threshold=[7,7,7])
+        #image = cv2.bilateralFilter(image, 11, 25, 100)
         image = self.unwarped(image)
         mask = self.detect_contours(image)
-        image = self.inpaint(image, mask)
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        print("Inpainting. Please Wait...")
+        i = Inpainter(image, mask, 4)
+        if i.checkValidInputs()== i.CHECK_VALID:
+            i.inpaint()
+            image = i.result
+        print("Inpainting Complete")
+
+        '''image = self.inpaint(image, mask)'''
         
         
         image = cv2.fastNlMeansDenoisingColored(image, h=12, hColor=12, templateWindowSize=7, searchWindowSize=21)
@@ -236,27 +245,19 @@ class image_processing:
 
         
         
-        
-        
+        print("Saving Image")
+        #file.save_image(image, filename)
         return image
+        
 
     def process_all_images(self):
         i = 1
-        #self.histogram()
-        
         for image in file.images:
-            print(f"Processing image {i} of {len(file.images)} - {image}")
+            print(f"\n-------------------\nProcessing image {i} of {len(file.images)} - {image}")
             i += 1
-            print(image)
             self.image = image
             processed_image = self.process_image(image)
             file.save_image(processed_image, image)
-
-
-
-            
-
-
 
 
 file = file_handling()
