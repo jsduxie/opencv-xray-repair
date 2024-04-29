@@ -218,7 +218,7 @@ class image_processing:
         
         
         image = cv2.fastNlMeansDenoisingColored(image, h=12, hColor=12, templateWindowSize=7, searchWindowSize=21)
-        image = self.laplace(image)
+        '''image = self.laplace(image)
         image = self.equalise(image)
         image = self.denoise(image)
         
@@ -241,14 +241,14 @@ class image_processing:
         g = np.clip(g * 1.1, 0, 255).astype(np.uint8)
         r = np.clip(r * 0.9, 0, 255).astype(np.uint8)
 
-        image = cv2.merge((b,g,r))
+        image = cv2.merge((b,g,r))'''
 
         
         
         print("Saving Image")
-        #file.save_image(image, filename)
+        file.save_image(image, filename)
         return image
-        
+        #cv2.imwrite("report_assets/Criminisi/opencv-im095.jpg", image)
 
     def process_all_images(self):
         i = 1
@@ -266,5 +266,5 @@ if (file.status == -1):
 
 
 processing = image_processing()
-#processing.process_image("im001-healthy.jpg")
+#processing.process_image("im095-pneumonia.jpg")
 processing.process_all_images()
