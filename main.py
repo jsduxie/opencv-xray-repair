@@ -97,7 +97,7 @@ class image_processing:
         dst = cv2.fastNlMeansDenoisingColored(image, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
         return dst
     def histogram(self):
-        img = cv2.imread('./Results/im001-healthy.jpg')
+        img = cv2.imread('./report_assets/Criminisi/Full/im001-healthy.jpg')
         assert img is not None, "file could not be read, check with os.path.exists()"
         color = ('b','g','r')
         for i,col in enumerate(color):
@@ -124,6 +124,7 @@ class image_processing:
         return result
     def laplace(self, image, ksize=3):
         dst = cv2.Laplacian(image, cv2.CV_8U, ksize=ksize)
+        
         image_new = cv2.subtract(image, dst)
         return image_new
     
@@ -201,8 +202,7 @@ class image_processing:
     def process_image(self, filename):
         image = cv2.imread(f'./{file.directory}/{filename}', cv2.IMREAD_COLOR)
 
-
-        image = self.adaptive_median_filter(image, threshold=[7,7,7])
+        '''image = self.adaptive_median_filter(image, threshold=[7,7,7])
         #image = cv2.bilateralFilter(image, 11, 25, 100)
         image = self.unwarped(image)
         mask = self.detect_contours(image)
@@ -214,12 +214,15 @@ class image_processing:
             image = i.result
         print("Inpainting Complete")
 
-        '''image = self.inpaint(image, mask)'''
+        #image = self.inpaint(image, mask)'''
         
         
         image = cv2.fastNlMeansDenoisingColored(image, h=12, hColor=12, templateWindowSize=7, searchWindowSize=21)
-        '''image = self.laplace(image)
+        image = self.laplace(image)
+        
         image = self.equalise(image)
+        
+        
         image = self.denoise(image)
         
         image = self.contrast_lab(image)
@@ -231,8 +234,11 @@ class image_processing:
         sobel_x = cv2.convertScaleAbs(sobel_x)
         sobel_y = cv2.convertScaleAbs(sobel_y)
 
+        
+
         # Combine the horizontal and vertical gradients to get the final Sobel edge detection result
         sobel = cv2.addWeighted(sobel_x, 0.5, sobel_y, 0.5, 0)
+        
         image = cv2.addWeighted(image, 1, sobel, 0.1, 0)
         
         b,g,r = cv2.split(image)
@@ -241,12 +247,12 @@ class image_processing:
         g = np.clip(g * 1.1, 0, 255).astype(np.uint8)
         r = np.clip(r * 0.9, 0, 255).astype(np.uint8)
 
-        image = cv2.merge((b,g,r))'''
-
+        image = cv2.merge((b,g,r))
+        
         
         
         print("Saving Image")
-        file.save_image(image, filename)
+        #file.save_image(image, filename)
         return image
         #cv2.imwrite("report_assets/Criminisi/opencv-im095.jpg", image)
 
@@ -266,5 +272,5 @@ if (file.status == -1):
 
 
 processing = image_processing()
-#processing.process_image("im095-pneumonia.jpg")
+#processing.process_image("im099-pneumonia.jpg")
 processing.process_all_images()
