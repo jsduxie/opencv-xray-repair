@@ -1,8 +1,6 @@
 # Python Implementation of Criminisi Inpainting Algorithm (Region Filling and Object Removal by Exemplar-Based Image Inpainting)
 # Code modified from https://github.com/NazminJuli/Criminisi-Inpainting by N. Nahar
 
-# James Duxbury - Image Processing Coursework
-
 ##### Import Modules #####
 import sys, os, time
 import math, cv2
