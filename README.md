@@ -1,45 +1,67 @@
-# image-processing-coursework
- Data Science (Image Processing) Coursework
+# Repairing X-ray Images With OpenCV and Python
 
-# Submission Instructions
-The information in the assignment brief is designed to explain the problem that needs to be solved. While the brief contains information on what needs to be submitted, please make sure that the guidance presented here is followed as it is designed to make things work with the autograder.
+![Process Workflow](report_assets/new-process-workflow.png)
 
-Your program must contain an argument parser in the main script that allows a directory containing images to be specified. The autograder will try to run your program in the following way:
+This repo contains my project as part of my image processing coursework, where I developed a solution to repair damaged X-ray images using OpenCV and Python. The goal was to improve the performance of a pretrained classifier by enhancing the image quality of the X-rays.
 
-python main.py image_processing_files/xray_images/
+## Introduction
+In medical imaging, particularly with X-rays, the presence of artifacts or damage can reduce the accuracy of classifiers used for diagnostics. This project focuses on repairing damaged X-ray images to improve the performance of a pretrained classifier. By utilizing OpenCV, the project restores image quality, making it easier for classifiers to process the images accurately.
 
-from which it will cycle through the images in the specified directory, perform all the processing and save the images without changing the filenames in a directory called “Results”. The contents of this directory will also be a part of your submission. You program should create the Results directory if it does not already exist. 
+The images were artificially damaged, with warping, noise (both gaussian and salt and pepper), and colour imbalances present. There was also a missing section in each image, with a different size and location, requiring significant inpainting.
 
-Note that the name of the Results directory should start with a capital R. Also note that the name of the image files should not be changed before they are placed in the Results directory.
+In order to detect missing regions, I made use of Canny Edge Detection, as seen in the below flowchart:
+![Canny Edge Detection Process](report_assets/Edge/Canny-Process.png)
 
-Your program should save the images in the same resolution as originally provided.
+## Technologies
+OpenCV
+NumPy
+Matplotlib
 
-Since the point is very important, it is repeated here again. A directory called “Results” which contains the results of your image enhancement techniques on the corrupted test images should be submitted. Do not change the name, format or the resolution or the images. Note that the name of the directory “Results” should start with a capital R. Changes in the names and formats can affect the automatic grading system and will result in you losing marks. 
+## Project Structure
+image_processing_files - stores the damaged images, as well as the pretrained classifier `classifier.py`
+report_assets - includes images and diagrams for use in my report
+Results - stores the repaired images
 
-Make sure you do not create any extra directories or folder structures. Your submission should contain all the files that you need with the only other directory submitted being the Results directory.
+report.pdf - describes and describes the approach made
+main.py - main project to clean X-ray images
+Inpainter.py - Criminisi implementation from Nahar https://github.com/NazminJuli/Criminisi-Inpainting
 
-Please do not include files that are not asked for.
+## Installation
+Clone the repository:
+``` Bash
+git clone https://github.com/jsduxie/opencv-xray-repair
+```
 
-Do not include classify.py as this will interfere with the evaluation script. The marking process will have its own version of classify.py.
+Install the required dependencies:
+``` Bash
+pip install -r requirements.txt
+```
 
-As the specifications make clear "your program must contain an argument parser in the main script that allows a directory containing images to be specified." Do not hardcode image paths that might not exist when I run your code.
+## Usage
+All damaged images are stored in `image-processing-files/x-ray_images`.
 
-Note that your code needs to run with this command exactly:
+To run:
+```Bash
+python3 main.py [directory]
+```
+Where `directory` is the relative path to the folder containing the damaged (input) images.
 
-python3 main.py unseen_test_imgs
+To confirm the results with the pre-trained classifier:
+``` Bash
+cd image_processing_files
+python3 classifier.py [directory]
+```
+Where `directory` is the relative path to the folder containing the repaired (outputted) images.
 
-I will of course provide the directory containing these unseen test images.
+## Results
+With this method, I was able to achieve a classifier accuracy of 0.90, with a baseline of 0.55 for unrepaired images. Using OpenCV's `inpaint()` method achieved a classifier accuracy of 0.93, at the cost of less convincing inpainting.
 
+The application of Criminisi's algorithm via https://github.com/NazminJuli/Criminisi-Inpainting proved invaluable when combined with my use of Canny edge detection to detect missing regions.
 
+![Results](image.png)
 
-Do not submit your files in any extra directories. On gradescope, your submission files should be in the root directory and not in an extra directory.
+## Acknowledgements
+The Criminisi Inpainter implementation was provided by @NazminJuli - https://github.com/NazminJuli/Criminisi-Inpainting
 
-For instance when you want to submit your main.py, do not submit this:
-
- Final_Submission/main.py
-
-but submit this:
-
-main.py
-
-All files should be at the same directory level. The only directory you will submit is the "Results" directory, which should be at the same level as the rest of your files. 
+## License
+Feel free to demo this code, however please provide credit if you use or build upon this :)
