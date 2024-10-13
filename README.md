@@ -1,6 +1,6 @@
 # Repairing X-ray Images With OpenCV and Python
 
-![Process Workflow](report_assets/new-process-workflow.png)
+![Overall Process Workflow](report_assets/README/image-processing-coursework.png)
 
 This repo contains my project as part of my image processing coursework, where I developed a solution to repair damaged X-ray images using OpenCV and Python. The goal was to improve the performance of a pretrained classifier by enhancing the image quality of the X-rays.
 
@@ -10,7 +10,7 @@ In medical imaging, particularly with X-rays, the presence of artifacts or damag
 The images were artificially damaged, with warping, noise (both gaussian and salt and pepper), and colour imbalances present. There was also a missing section in each image, with a different size and location, requiring significant inpainting.
 
 In order to detect missing regions, I made use of Canny Edge Detection, as seen in the below flowchart:
-![Canny Edge Detection Process](report_assets/Edge/Canny-Process.png)
+![Canny Process](report_assets/README/image-processing-coursework-2.png)
 
 ## Technologies
 OpenCV
@@ -58,7 +58,7 @@ With this method, I was able to achieve a classifier accuracy of 0.90, with a ba
 
 The application of Criminisi's algorithm via https://github.com/NazminJuli/Criminisi-Inpainting proved invaluable when combined with my use of Canny edge detection to detect missing regions.
 
-![Results](image.png)
+![Results](report_assets/README/image-processing-coursework-3.png)
 
 ## Acknowledgements
 The Criminisi Inpainter implementation was provided by @NazminJuli - https://github.com/NazminJuli/Criminisi-Inpainting
